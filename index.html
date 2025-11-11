@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Speaking Coach - AI Practice App</title>
+    <title>English Speaking Coach - AI Voice Conversation</title>
     <style>
         * {
             margin: 0;
@@ -38,6 +38,19 @@
         .header p {
             font-size: 1.2em;
             opacity: 0.9;
+        }
+
+        .voice-indicator {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .voice-indicator.speaking {
+            background: #28a745;
+            animation: pulse 1s infinite;
         }
 
         .main-content {
@@ -166,6 +179,11 @@
         .mic-btn.recording {
             background: #e74c3c;
             animation: pulse 1.5s infinite;
+        }
+
+        .mic-btn.disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
 
         @keyframes pulse {
@@ -323,6 +341,33 @@
             background: #dc3545;
         }
 
+        .status-indicator.speaking {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+
+        .voice-settings {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .voice-settings label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .voice-settings select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -341,25 +386,34 @@
             display: none;
         }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
+        .ai-speaking-indicator {
+            background: #ffc107;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            animation: pulse 1.5s infinite;
         }
 
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
+        .wave {
+            display: inline-block;
+            width: 5px;
+            height: 20px;
+            background: #000;
+            margin: 0 2px;
+            animation: wave 1s infinite ease-in-out;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .wave:nth-child(2) { animation-delay: 0.1s; }
+        .wave:nth-child(3) { animation-delay: 0.2s; }
+        .wave:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes wave {
+            0%, 100% { height: 10px; }
+            50% { height: 25px; }
         }
     </style>
 </head>
@@ -367,7 +421,11 @@
     <div class="container">
         <div class="header">
             <h1>🎙️ English Speaking Coach</h1>
-            <p>Practice English with AI in different roles - Improve your speaking skills!</p>
+            <p>Real Voice Conversation with AI - Just like talking to a human!</p>
+            <div class="voice-indicator" id="voiceStatus">
+                <span class="status-indicator active"></span>
+                AI Voice: Ready
+            </div>
         </div>
 
         <div class="main-content">
@@ -393,16 +451,37 @@
             <!-- Conversation Area -->
             <div class="card">
                 <h2>
-                    <span class="status-indicator active"></span>
-                    Conversation
+                    <span class="status-indicator active" id="conversationStatus"></span>
+                    Voice Conversation
                 </h2>
+                
+                <!-- Voice Settings -->
+                <div class="voice-settings">
+                    <label>AI Voice:</label>
+                    <select id="voiceSelect">
+                        <option value="">Loading voices...</option>
+                    </select>
+                </div>
+
                 <div class="conversation-area" id="conversationArea">
                     <div class="message ai">
-                        Hello! I'm your English speaking coach. I'm currently in <strong>Friend mode</strong> - ready for a casual chat! 
-                        You can speak or type. I'll help you improve your English by pointing out mistakes and suggesting better ways to express yourself. 
-                        Let's start! How are you doing today?
+                        Hello! I'm your English speaking coach with VOICE! 🎙️
+                        <br><br>
+                        I can speak to you just like a human. Click the microphone and start talking, or type your message. 
+                        I'll respond in voice and help improve your English!
+                        <br><br>
+                        <strong>Currently in Friend mode.</strong> Ready for a casual chat! How are you doing today?
                     </div>
                 </div>
+
+                <div id="aiSpeakingIndicator" class="ai-speaking-indicator hidden">
+                    🔊 AI is speaking...
+                    <span class="wave"></span>
+                    <span class="wave"></span>
+                    <span class="wave"></span>
+                    <span class="wave"></span>
+                </div>
+
                 <div class="controls">
                     <button class="mic-btn" id="micBtn" title="Click to speak">🎤</button>
                     <input type="text" class="text-input" id="textInput" placeholder="Or type your message here...">
@@ -467,6 +546,103 @@
             accuracy: 100
         };
 
+        // Speech Synthesis (AI Voice)
+        let synth = window.speechSynthesis;
+        let voices = [];
+        let selectedVoice = null;
+        let isSpeaking = false;
+
+        // Load voices
+        function loadVoices() {
+            voices = synth.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            voiceSelect.innerHTML = '';
+            
+            // Filter English voices
+            const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
+            
+            englishVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+                
+                // Select a good default voice
+                if (voice.name.includes('Google') || voice.name.includes('Microsoft')) {
+                    selectedVoice = voice;
+                    option.selected = true;
+                }
+            });
+
+            if (!selectedVoice && englishVoices.length > 0) {
+                selectedVoice = englishVoices[0];
+            }
+        }
+
+        // Load voices on page load
+        loadVoices();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+
+        // Voice selection change
+        document.getElementById('voiceSelect').addEventListener('change', function() {
+            const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
+            selectedVoice = englishVoices[this.value];
+        });
+
+        // Speak function - AI speaks in voice
+        function speak(text) {
+            return new Promise((resolve, reject) => {
+                if (isSpeaking) {
+                    synth.cancel();
+                }
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.voice = selectedVoice;
+                utterance.rate = 0.9; // Slightly slower for clarity
+                utterance.pitch = 1;
+                utterance.volume = 1;
+
+                // Show speaking indicator
+                document.getElementById('aiSpeakingIndicator').classList.remove('hidden');
+                document.getElementById('conversationStatus').classList.add('speaking');
+                document.getElementById('voiceStatus').classList.add('speaking');
+                document.getElementById('voiceStatus').innerHTML = '<span class="status-indicator speaking"></span>AI is speaking...';
+                isSpeaking = true;
+
+                // Disable mic while AI is speaking
+                document.getElementById('micBtn').classList.add('disabled');
+                document.getElementById('micBtn').disabled = true;
+
+                utterance.onend = () => {
+                    document.getElementById('aiSpeakingIndicator').classList.add('hidden');
+                    document.getElementById('conversationStatus').classList.remove('speaking');
+                    document.getElementById('voiceStatus').classList.remove('speaking');
+                    document.getElementById('voiceStatus').innerHTML = '<span class="status-indicator active"></span>AI Voice: Ready';
+                    isSpeaking = false;
+                    
+                    // Re-enable mic
+                    document.getElementById('micBtn').classList.remove('disabled');
+                    document.getElementById('micBtn').disabled = false;
+                    
+                    resolve();
+                };
+
+                utterance.onerror = (error) => {
+                    console.error('Speech error:', error);
+                    document.getElementById('aiSpeakingIndicator').classList.add('hidden');
+                    document.getElementById('conversationStatus').classList.remove('speaking');
+                    isSpeaking = false;
+                    document.getElementById('micBtn').classList.remove('disabled');
+                    document.getElementById('micBtn').disabled = false;
+                    reject(error);
+                };
+
+                synth.speak(utterance);
+            });
+        }
+
         // Load saved data
         function loadData() {
             const saved = localStorage.getItem('englishCoachData');
@@ -503,6 +679,7 @@
                 };
                 
                 addMessage(modeMessages[currentMode], 'ai');
+                speak(modeMessages[currentMode]);
             });
         });
 
@@ -518,16 +695,14 @@
             conversationHistory.push({ sender, text, timestamp: new Date() });
         }
 
-        // Analyze text for mistakes (simple grammar check)
+        // Analyze text for mistakes
         function analyzeMistakes(text) {
             const foundMistakes = [];
             
-            // Common grammar mistakes
             const rules = [
                 { wrong: /\bi am working from\b/gi, correct: 'I have been working for', type: 'Tense' },
                 { wrong: /\bi am knowing\b/gi, correct: 'I know', type: 'Stative Verb' },
                 { wrong: /\bmore better\b/gi, correct: 'better', type: 'Double Comparative' },
-                { wrong: /\bvery much\b/gi, correct: 'very', type: 'Redundancy' },
                 { wrong: /\bhe don't\b/gi, correct: 'he doesn\'t', type: 'Subject-Verb Agreement' },
                 { wrong: /\bshe don't\b/gi, correct: 'she doesn\'t', type: 'Subject-Verb Agreement' },
                 { wrong: /\bit don't\b/gi, correct: 'it doesn\'t', type: 'Subject-Verb Agreement' },
@@ -536,7 +711,6 @@
                 { wrong: /\bless people\b/gi, correct: 'fewer people', type: 'Countable/Uncountable' },
                 { wrong: /\bmore easier\b/gi, correct: 'easier', type: 'Double Comparative' },
                 { wrong: /\bcan able to\b/gi, correct: 'can / am able to', type: 'Modal Verb' },
-                { wrong: /\bwill can\b/gi, correct: 'will be able to', type: 'Modal Verb' },
                 { wrong: /\bdidn't went\b/gi, correct: 'didn\'t go', type: 'Verb Form' },
                 { wrong: /\bmore good\b/gi, correct: 'better', type: 'Irregular Comparative' }
             ];
@@ -553,76 +727,59 @@
                 }
             });
 
-            // Check for missing articles
-            if (/\b(is|was|are|were)\s+(good|bad|important|necessary)\b/gi.test(text)) {
-                const match = text.match(/\b(is|was|are|were)\s+(good|bad|important|necessary)\b/gi);
-                if (match) {
-                    foundMistakes.push({
-                        wrong: match[0],
-                        correct: match[0].replace(/\s+/, ' a '),
-                        type: 'Missing Article',
-                        sentence: text
-                    });
-                }
-            }
-
             return foundMistakes;
         }
 
         // Process user input
-        function processInput(text) {
+        async function processInput(text) {
             if (!text.trim()) return;
 
             addMessage(text, 'user');
             
-            // Count words
             const wordCount = text.trim().split(/\s+/).length;
             stats.wordsSpoken += wordCount;
 
-            // Analyze mistakes
             const foundMistakes = analyzeMistakes(text);
             
             if (foundMistakes.length > 0) {
                 stats.totalMistakes += foundMistakes.length;
                 mistakes.push(...foundMistakes);
                 
-                // Add mistakes to UI
                 foundMistakes.forEach(mistake => {
                     addMistakeToList(mistake);
                 });
 
-                // Generate correction message
-                let correctionMsg = "I noticed some areas for improvement:\n\n";
+                let correctionMsg = "I noticed some areas for improvement. ";
                 foundMistakes.forEach((m, i) => {
-                    correctionMsg += `${i + 1}. ${m.type}: "${m.wrong}" → "${m.correct}"\n`;
+                    correctionMsg += `${m.type}: instead of "${m.wrong}", say "${m.correct}". `;
                 });
-                correctionMsg += "\nLet me show you a better way to say that...";
                 
-                setTimeout(() => {
-                    addMessage(correctionMsg, 'ai');
-                    
-                    // Provide corrected version
-                    let correctedText = text;
-                    foundMistakes.forEach(m => {
-                        correctedText = correctedText.replace(new RegExp(m.wrong, 'gi'), m.correct);
-                    });
-                    
-                    setTimeout(() => {
-                        addMessage(`Better version: "${correctedText}"`, 'ai');
-                        generateResponse(text);
-                    }, 1000);
-                }, 500);
+                addMessage(correctionMsg, 'ai');
+                await speak(correctionMsg);
+                
+                let correctedText = text;
+                foundMistakes.forEach(m => {
+                    correctedText = correctedText.replace(new RegExp(m.wrong, 'gi'), m.correct);
+                });
+                
+                const betterMsg = `A better way to say it: "${correctedText}"`;
+                addMessage(betterMsg, 'ai');
+                await speak(betterMsg);
+                
+                await generateResponse(text);
             } else {
-                addMessage("Great! That was grammatically correct. 👍", 'ai');
-                setTimeout(() => generateResponse(text), 500);
+                const goodMsg = "Great! That was grammatically correct.";
+                addMessage(goodMsg, 'ai');
+                await speak(goodMsg);
+                await generateResponse(text);
             }
 
             updateStats();
             saveData();
         }
 
-        // Generate AI response based on mode
-        function generateResponse(userText) {
+        // Generate AI response
+        async function generateResponse(userText) {
             const responses = {
                 friend: [
                     "That's interesting! Tell me more about it.",
@@ -648,8 +805,8 @@
                 teacher: [
                     "Excellent! Let's practice using that in a sentence.",
                     "Good effort! Remember to use the correct tense.",
-                    "Let me explain that grammar rule more clearly...",
-                    "Try to use more descriptive vocabulary. For example...",
+                    "Let me explain that grammar rule more clearly.",
+                    "Try to use more descriptive vocabulary.",
                     "That's correct! Now let's try a more complex sentence."
                 ]
             };
@@ -657,16 +814,15 @@
             const modeResponses = responses[currentMode];
             const response = modeResponses[Math.floor(Math.random() * modeResponses.length)];
             
-            setTimeout(() => {
-                addMessage(response, 'ai');
-            }, 1000);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            addMessage(response, 'ai');
+            await speak(response);
         }
 
         // Add mistake to list
         function addMistakeToList(mistake) {
             const mistakesList = document.getElementById('mistakesList');
             
-            // Remove placeholder
             if (mistakesList.querySelector('p')) {
                 mistakesList.innerHTML = '';
             }
@@ -713,7 +869,7 @@
             }
         });
 
-        // Voice input (Web Speech API)
+        // Voice input
         const micBtn = document.getElementById('micBtn');
         let recognition;
 
@@ -741,10 +897,14 @@
 
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                addMessage('Sorry, I couldn\'t hear you clearly. Please try again or type your message.', 'ai');
+                const errorMsg = 'Sorry, I couldn\'t hear you clearly. Please try again.';
+                addMessage(errorMsg, 'ai');
+                speak(errorMsg);
             };
 
             micBtn.addEventListener('click', () => {
+                if (micBtn.disabled) return;
+                
                 if (micBtn.classList.contains('recording')) {
                     recognition.stop();
                 } else {
@@ -753,16 +913,21 @@
             });
         } else {
             micBtn.disabled = true;
-            micBtn.title = 'Voice input not supported in this browser';
-            addMessage('Note: Voice input is not supported in your browser. Please use text input.', 'ai');
+            micBtn.title = 'Voice input not supported';
+            const msg = 'Voice input is not supported in your browser. Please use text input.';
+            addMessage(msg, 'ai');
+            speak(msg);
         }
 
         // Clear chat
         document.getElementById('clearBtn').addEventListener('click', () => {
             if (confirm('Clear conversation history?')) {
+                synth.cancel();
                 document.getElementById('conversationArea').innerHTML = '';
                 conversationHistory = [];
-                addMessage('Conversation cleared. Let\'s start fresh! How can I help you practice today?', 'ai');
+                const msg = 'Conversation cleared. Let\'s start fresh! How can I help you practice today?';
+                addMessage(msg, 'ai');
+                speak(msg);
             }
         });
 
@@ -771,47 +936,46 @@
             stats.sessions++;
             saveData();
             
-            let report = `📊 SESSION SUMMARY REPORT\n\n`;
-            report += `Mode: ${currentMode.toUpperCase()}\n`;
-            report += `Duration: ${conversationHistory.length} messages\n`;
-            report += `Words Spoken: ${stats.wordsSpoken}\n`;
-            report += `Mistakes Found: ${mistakes.length}\n`;
-            report += `Accuracy: ${stats.accuracy}%\n\n`;
+            let report = `Session Summary Report.\n\n`;
+            report += `Mode: ${currentMode}.\n`;
+            report += `Messages: ${conversationHistory.length}.\n`;
+            report += `Words Spoken: ${stats.wordsSpoken}.\n`;
+            report += `Mistakes Found: ${mistakes.length}.\n`;
+            report += `Accuracy: ${stats.accuracy} percent.\n\n`;
             
             if (mistakes.length > 0) {
-                report += `MISTAKES & CORRECTIONS:\n\n`;
+                report += `Mistakes and Corrections:\n\n`;
                 mistakes.forEach((m, i) => {
-                    report += `${i + 1}. ${m.type}\n`;
-                    report += `   Wrong: ${m.wrong}\n`;
-                    report += `   Correct: ${m.correct}\n\n`;
+                    report += `${i + 1}. ${m.type}. Wrong: ${m.wrong}. Correct: ${m.correct}.\n`;
                 });
             } else {
-                report += `Excellent! No mistakes found in this session! 🎉\n\n`;
+                report += `Excellent! No mistakes found in this session!\n`;
             }
             
-            report += `RECOMMENDATIONS:\n`;
+            report += `\nRecommendations:\n`;
             if (stats.accuracy < 70) {
-                report += `- Focus on basic grammar rules\n`;
-                report += `- Practice with Teacher mode more\n`;
+                report += `Focus on basic grammar rules. Practice with Teacher mode more.`;
             } else if (stats.accuracy < 90) {
-                report += `- Good progress! Keep practicing\n`;
-                report += `- Try more complex conversations\n`;
+                report += `Good progress! Keep practicing. Try more complex conversations.`;
             } else {
-                report += `- Excellent accuracy! Try advanced topics\n`;
-                report += `- Practice with Boss/Interviewer modes\n`;
+                report += `Excellent accuracy! Try advanced topics. Practice with Boss or Interviewer modes.`;
             }
             
-            // Display report
             alert(report);
+            speak("I've generated your summary report. Check the popup for details.");
             
-            // Reset session mistakes
             mistakes = [];
             document.getElementById('mistakesList').innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Session cleared. Start speaking to see new corrections.</p>';
         });
 
-        // Start new session
+        // Start session
         stats.sessions++;
         updateStats();
+
+        // Speak welcome message
+        setTimeout(() => {
+            speak("Hello! I'm your English speaking coach with voice. I can speak to you just like a human. Click the microphone and start talking, or type your message. Currently in Friend mode. Ready for a casual chat! How are you doing today?");
+        }, 1000);
     </script>
 </body>
 </html>
