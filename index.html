@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Speaking Coach - AI Practice App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .mode-selector {
+            grid-column: 1 / -1;
+        }
+
+        .mode-selector h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .mode-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .mode-btn {
+            padding: 15px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .mode-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .conversation-area {
+            min-height: 400px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.ai {
+            background: #667eea;
+            color: white;
+            margin-right: auto;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            color: #333;
+            margin-left: auto;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .mic-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: none;
+            background: #667eea;
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .mic-btn.recording {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .send-btn {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .mistakes-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .mistake-item {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .mistake-item .wrong {
+            color: #c62828;
+            text-decoration: line-through;
+            font-weight: bold;
+        }
+
+        .mistake-item .correct {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.active {
+            background: #28a745;
+            box-shadow: 0 0 10px #28a745;
+        }
+
+        .status-indicator.inactive {
+            background: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .mode-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ English Speaking Coach</h1>
+            <p>Practice English with AI in different roles - Improve your speaking skills!</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Mode Selector -->
+            <div class="card mode-selector">
+                <h2>Choose Your Practice Mode</h2>
+                <div class="mode-buttons">
+                    <button class="mode-btn active" data-mode="friend">
+                        👥 Friend<br><small>Casual Chat</small>
+                    </button>
+                    <button class="mode-btn" data-mode="interviewer">
+                        💼 Interviewer<br><small>Job Interview</small>
+                    </button>
+                    <button class="mode-btn" data-mode="boss">
+                        👔 Boss<br><small>Workplace</small>
+                    </button>
+                    <button class="mode-btn" data-mode="teacher">
+                        📚 Teacher<br><small>Grammar Lessons</small>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conversation Area -->
+            <div class="card">
+                <h2>
+                    <span class="status-indicator active"></span>
+                    Conversation
+                </h2>
+                <div class="conversation-area" id="conversationArea">
+                    <div class="message ai">
+                        Hello! I'm your English speaking coach. I'm currently in <strong>Friend mode</strong> - ready for a casual chat! 
+                        You can speak or type. I'll help you improve your English by pointing out mistakes and suggesting better ways to express yourself. 
+                        Let's start! How are you doing today?
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="mic-btn" id="micBtn" title="Click to speak">🎤</button>
+                    <input type="text" class="text-input" id="textInput" placeholder="Or type your message here...">
+                    <button class="send-btn" id="sendBtn">Send</button>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="clearBtn">Clear Chat</button>
+                    <button class="btn btn-success" id="reportBtn">Get Summary Report</button>
+                </div>
+            </div>
+
+            <!-- Progress Stats -->
+            <div class="card">
+                <h2>📊 Your Progress</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="sessionCount">0</h3>
+                        <p>Sessions</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="mistakeCount">0</h3>
+                        <p>Mistakes Corrected</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="wordsSpoken">0</h3>
+                        <p>Words Spoken</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="accuracyScore">100%</h3>
+                        <p>Accuracy</p>
+                    </div>
+                </div>
+                <div>
+                    <p><strong>Overall Progress</strong></p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mistakes Tracker -->
+            <div class="card">
+                <h2>❌ Mistakes & Corrections</h2>
+                <div class="mistakes-list" id="mistakesList">
+                    <p style="text-align: center; color: #999; padding: 20px;">
+                        No mistakes yet! Start speaking to see corrections here.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State
+        let currentMode = 'friend';
+        let conversationHistory = [];
+        let mistakes = [];
+        let stats = {
+            sessions: 0,
+            totalMistakes: 0,
+            wordsSpoken: 0,
+            accuracy: 100
+        };
+
+        // Load saved data
+        function loadData() {
+            const saved = localStorage.getItem('englishCoachData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                stats = data.stats || stats;
+                updateStats();
+            }
+        }
+
+        // Save data
+        function saveData() {
+            localStorage.setItem('englishCoachData', JSON.stringify({
+                stats: stats,
+                lastSession: new Date().toISOString()
+            }));
+        }
+
+        // Initialize
+        loadData();
+
+        // Mode Selection
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentMode = this.dataset.mode;
+                
+                const modeMessages = {
+                    friend: "Great! I'm now in Friend mode. Let's have a casual conversation. What's on your mind today?",
+                    interviewer: "Switching to Interviewer mode. I'll conduct a professional interview. First, tell me - what job position are you preparing for?",
+                    boss: "Now in Boss mode. Let's discuss workplace scenarios. Imagine we're in a team meeting. How's your current project going?",
+                    teacher: "Teacher mode activated! I'll help you with grammar and vocabulary. What would you like to learn today?"
+                };
+                
+                addMessage(modeMessages[currentMode], 'ai');
+            });
+        });
+
+        // Add message to conversation
+        function addMessage(text, sender) {
+            const conversationArea = document.getElementById('conversationArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.textContent = text;
+            conversationArea.appendChild(messageDiv);
+            conversationArea.scrollTop = conversationArea.scrollHeight;
+            
+            conversationHistory.push({ sender, text, timestamp: new Date() });
+        }
+
+        // Analyze text for mistakes (simple grammar check)
+        function analyzeMistakes(text) {
+            const foundMistakes = [];
+            
+            // Common grammar mistakes
+            const rules = [
+                { wrong: /\bi am working from\b/gi, correct: 'I have been working for', type: 'Tense' },
+                { wrong: /\bi am knowing\b/gi, correct: 'I know', type: 'Stative Verb' },
+                { wrong: /\bmore better\b/gi, correct: 'better', type: 'Double Comparative' },
+                { wrong: /\bvery much\b/gi, correct: 'very', type: 'Redundancy' },
+                { wrong: /\bhe don't\b/gi, correct: 'he doesn\'t', type: 'Subject-Verb Agreement' },
+                { wrong: /\bshe don't\b/gi, correct: 'she doesn\'t', type: 'Subject-Verb Agreement' },
+                { wrong: /\bit don't\b/gi, correct: 'it doesn\'t', type: 'Subject-Verb Agreement' },
+                { wrong: /\bi have to went\b/gi, correct: 'I had to go', type: 'Verb Form' },
+                { wrong: /\bmuch people\b/gi, correct: 'many people', type: 'Countable/Uncountable' },
+                { wrong: /\bless people\b/gi, correct: 'fewer people', type: 'Countable/Uncountable' },
+                { wrong: /\bmore easier\b/gi, correct: 'easier', type: 'Double Comparative' },
+                { wrong: /\bcan able to\b/gi, correct: 'can / am able to', type: 'Modal Verb' },
+                { wrong: /\bwill can\b/gi, correct: 'will be able to', type: 'Modal Verb' },
+                { wrong: /\bdidn't went\b/gi, correct: 'didn\'t go', type: 'Verb Form' },
+                { wrong: /\bmore good\b/gi, correct: 'better', type: 'Irregular Comparative' }
+            ];
+
+            rules.forEach(rule => {
+                if (rule.wrong.test(text)) {
+                    const wrongText = text.match(rule.wrong)[0];
+                    foundMistakes.push({
+                        wrong: wrongText,
+                        correct: rule.correct,
+                        type: rule.type,
+                        sentence: text
+                    });
+                }
+            });
+
+            // Check for missing articles
+            if (/\b(is|was|are|were)\s+(good|bad|important|necessary)\b/gi.test(text)) {
+                const match = text.match(/\b(is|was|are|were)\s+(good|bad|important|necessary)\b/gi);
+                if (match) {
+                    foundMistakes.push({
+                        wrong: match[0],
+                        correct: match[0].replace(/\s+/, ' a '),
+                        type: 'Missing Article',
+                        sentence: text
+                    });
+                }
+            }
+
+            return foundMistakes;
+        }
+
+        // Process user input
+        function processInput(text) {
+            if (!text.trim()) return;
+
+            addMessage(text, 'user');
+            
+            // Count words
+            const wordCount = text.trim().split(/\s+/).length;
+            stats.wordsSpoken += wordCount;
+
+            // Analyze mistakes
+            const foundMistakes = analyzeMistakes(text);
+            
+            if (foundMistakes.length > 0) {
+                stats.totalMistakes += foundMistakes.length;
+                mistakes.push(...foundMistakes);
+                
+                // Add mistakes to UI
+                foundMistakes.forEach(mistake => {
+                    addMistakeToList(mistake);
+                });
+
+                // Generate correction message
+                let correctionMsg = "I noticed some areas for improvement:\n\n";
+                foundMistakes.forEach((m, i) => {
+                    correctionMsg += `${i + 1}. ${m.type}: "${m.wrong}" → "${m.correct}"\n`;
+                });
+                correctionMsg += "\nLet me show you a better way to say that...";
+                
+                setTimeout(() => {
+                    addMessage(correctionMsg, 'ai');
+                    
+                    // Provide corrected version
+                    let correctedText = text;
+                    foundMistakes.forEach(m => {
+                        correctedText = correctedText.replace(new RegExp(m.wrong, 'gi'), m.correct);
+                    });
+                    
+                    setTimeout(() => {
+                        addMessage(`Better version: "${correctedText}"`, 'ai');
+                        generateResponse(text);
+                    }, 1000);
+                }, 500);
+            } else {
+                addMessage("Great! That was grammatically correct. 👍", 'ai');
+                setTimeout(() => generateResponse(text), 500);
+            }
+
+            updateStats();
+            saveData();
+        }
+
+        // Generate AI response based on mode
+        function generateResponse(userText) {
+            const responses = {
+                friend: [
+                    "That's interesting! Tell me more about it.",
+                    "I see what you mean. How do you feel about that?",
+                    "That sounds great! What happened next?",
+                    "Really? That's fascinating! Can you elaborate?",
+                    "I understand. What do you think about it?"
+                ],
+                interviewer: [
+                    "Good answer. Now, can you give me a specific example?",
+                    "Interesting. How would you handle a difficult situation in this role?",
+                    "I see. What are your strengths and weaknesses?",
+                    "Can you tell me about a time when you faced a challenge?",
+                    "What makes you the best candidate for this position?"
+                ],
+                boss: [
+                    "I appreciate the update. What's the timeline for completion?",
+                    "Good work. How can we improve the process?",
+                    "I see some concerns. What's your plan to address them?",
+                    "Let's discuss the next steps. What do you propose?",
+                    "That's a valid point. How does this align with our goals?"
+                ],
+                teacher: [
+                    "Excellent! Let's practice using that in a sentence.",
+                    "Good effort! Remember to use the correct tense.",
+                    "Let me explain that grammar rule more clearly...",
+                    "Try to use more descriptive vocabulary. For example...",
+                    "That's correct! Now let's try a more complex sentence."
+                ]
+            };
+
+            const modeResponses = responses[currentMode];
+            const response = modeResponses[Math.floor(Math.random() * modeResponses.length)];
+            
+            setTimeout(() => {
+                addMessage(response, 'ai');
+            }, 1000);
+        }
+
+        // Add mistake to list
+        function addMistakeToList(mistake) {
+            const mistakesList = document.getElementById('mistakesList');
+            
+            // Remove placeholder
+            if (mistakesList.querySelector('p')) {
+                mistakesList.innerHTML = '';
+            }
+
+            const mistakeDiv = document.createElement('div');
+            mistakeDiv.className = 'mistake-item';
+            mistakeDiv.innerHTML = `
+                <strong>${mistake.type}</strong><br>
+                ❌ <span class="wrong">${mistake.wrong}</span><br>
+                ✅ <span class="correct">${mistake.correct}</span>
+            `;
+            mistakesList.insertBefore(mistakeDiv, mistakesList.firstChild);
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('sessionCount').textContent = stats.sessions;
+            document.getElementById('mistakeCount').textContent = stats.totalMistakes;
+            document.getElementById('wordsSpoken').textContent = stats.wordsSpoken;
+            
+            const accuracy = stats.wordsSpoken > 0 
+                ? Math.max(0, 100 - (stats.totalMistakes / stats.wordsSpoken * 100)).toFixed(1)
+                : 100;
+            stats.accuracy = accuracy;
+            document.getElementById('accuracyScore').textContent = accuracy + '%';
+            
+            const progress = Math.min(100, (stats.wordsSpoken / 1000) * 100);
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressFill').textContent = progress.toFixed(0) + '%';
+        }
+
+        // Text input
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const input = document.getElementById('textInput');
+            processInput(input.value);
+            input.value = '';
+        });
+
+        document.getElementById('textInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('textInput');
+                processInput(input.value);
+                input.value = '';
+            }
+        });
+
+        // Voice input (Web Speech API)
+        const micBtn = document.getElementById('micBtn');
+        let recognition;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                micBtn.classList.add('recording');
+                micBtn.textContent = '🔴';
+            };
+
+            recognition.onend = () => {
+                micBtn.classList.remove('recording');
+                micBtn.textContent = '🎤';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                processInput(transcript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                addMessage('Sorry, I couldn\'t hear you clearly. Please try again or type your message.', 'ai');
+            };
+
+            micBtn.addEventListener('click', () => {
+                if (micBtn.classList.contains('recording')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+        } else {
+            micBtn.disabled = true;
+            micBtn.title = 'Voice input not supported in this browser';
+            addMessage('Note: Voice input is not supported in your browser. Please use text input.', 'ai');
+        }
+
+        // Clear chat
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (confirm('Clear conversation history?')) {
+                document.getElementById('conversationArea').innerHTML = '';
+                conversationHistory = [];
+                addMessage('Conversation cleared. Let\'s start fresh! How can I help you practice today?', 'ai');
+            }
+        });
+
+        // Generate report
+        document.getElementById('reportBtn').addEventListener('click', () => {
+            stats.sessions++;
+            saveData();
+            
+            let report = `📊 SESSION SUMMARY REPORT\n\n`;
+            report += `Mode: ${currentMode.toUpperCase()}\n`;
+            report += `Duration: ${conversationHistory.length} messages\n`;
+            report += `Words Spoken: ${stats.wordsSpoken}\n`;
+            report += `Mistakes Found: ${mistakes.length}\n`;
+            report += `Accuracy: ${stats.accuracy}%\n\n`;
+            
+            if (mistakes.length > 0) {
+                report += `MISTAKES & CORRECTIONS:\n\n`;
+                mistakes.forEach((m, i) => {
+                    report += `${i + 1}. ${m.type}\n`;
+                    report += `   Wrong: ${m.wrong}\n`;
+                    report += `   Correct: ${m.correct}\n\n`;
+                });
+            } else {
+                report += `Excellent! No mistakes found in this session! 🎉\n\n`;
+            }
+            
+            report += `RECOMMENDATIONS:\n`;
+            if (stats.accuracy < 70) {
+                report += `- Focus on basic grammar rules\n`;
+                report += `- Practice with Teacher mode more\n`;
+            } else if (stats.accuracy < 90) {
+                report += `- Good progress! Keep practicing\n`;
+                report += `- Try more complex conversations\n`;
+            } else {
+                report += `- Excellent accuracy! Try advanced topics\n`;
+                report += `- Practice with Boss/Interviewer modes\n`;
+            }
+            
+            // Display report
+            alert(report);
+            
+            // Reset session mistakes
+            mistakes = [];
+            document.getElementById('mistakesList').innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Session cleared. Start speaking to see new corrections.</p>';
+        });
+
+        // Start new session
+        stats.sessions++;
+        updateStats();
+    </script>
+</body>
+</html>
